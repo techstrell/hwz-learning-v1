@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IBM Z Hardware Flashcards</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+    background: #0f1117;
+    color: #e2e8f0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px 48px;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 28px;
+  }
+
+  header h1 {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: -0.5px;
+  }
+
+  header p {
+    font-size: 0.82rem;
+    color: #8b95a5;
+    margin-top: 4px;
+  }
+
+  /* Score bar */
+  .scorebar {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 20px;
+    background: #1a1d27;
+    border: 1px solid #2d3244;
+    border-radius: 12px;
+    padding: 12px 24px;
+    width: 100%;
+    max-width: 580px;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .score-item { text-align: center; }
+  .score-item .val {
+    font-size: 1.5rem;
+    font-weight: 700;
+  }
+  .score-item .lbl {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #8b95a5;
+    margin-top: 2px;
+  }
+  .know   .val { color: #22c55e; }
+  .partial .val { color: #f59e0b; }
+  .missed  .val { color: #ef4444; }
+  .remain  .val { color: #60a5fa; }
+
+  /* Progress bar */
+  .progress-wrap {
+    width: 100%;
+    max-width: 580px;
+    margin-bottom: 20px;
+  }
+  .progress-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    color: #8b95a5;
+    margin-bottom: 6px;
+  }
+  .progress-track {
+    height: 6px;
+    background: #1a1d27;
+    border-radius: 99px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #3b82f6, #6366f1);
+    border-radius: 99px;
+    transition: width 0.4s ease;
+  }
+
+  /* Card scene */
+  .scene {
+    width: 100%;
+    max-width: 580px;
+    height: 300px;
+    perspective: 1200px;
+    cursor: pointer;
+    margin-bottom: 20px;
+    user-select: none;
+  }
+
+  .card {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.55s cubic-bezier(0.45, 0.05, 0.55, 0.95);
+  }
+
+  .card.flipped { transform: rotateY(180deg); }
+
+  .face {
+    position: absolute;
+    inset: 0;
+    border-radius: 18px;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 28px 32px;
+    border: 1px solid #2d3244;
+  }
+
+  .face.front {
+    background: #1a1d27;
+  }
+
+  .face.back {
+    background: #161926;
+    transform: rotateY(180deg);
+  }
+
+  .face .category {
+    position: absolute;
+    top: 16px;
+    left: 20px;
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #6366f1;
+    font-weight: 600;
+  }
+
+  .face .hint {
+    position: absolute;
+    bottom: 14px;
+    right: 18px;
+    font-size: 0.68rem;
+    color: #8b95a5;
+  }
+
+  .face .card-num {
+    position: absolute;
+    top: 16px;
+    right: 20px;
+    font-size: 0.68rem;
+    color: #8b95a5;
+  }
+
+  .face h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    text-align: center;
+    color: #f1f5f9;
+    line-height: 1.4;
+  }
+
+  .face.back h2 {
+    font-size: 0.95rem;
+    font-weight: 400;
+    color: #cbd5e1;
+    line-height: 1.65;
+    text-align: left;
+    max-width: 100%;
+  }
+
+  .face.back .answer-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #6366f1;
+    font-weight: 600;
+    margin-bottom: 10px;
+  }
+
+  /* Action buttons */
+  .actions {
+    display: flex;
+    gap: 12px;
+    width: 100%;
+    max-width: 580px;
+    margin-bottom: 16px;
+  }
+
+  .btn {
+    flex: 1;
+    padding: 12px 8px;
+    border: none;
+    border-radius: 10px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+    letter-spacing: 0.02em;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  .btn-know    { background: #166534; color: #bbf7d0; border: 1px solid #16a34a; }
+  .btn-partial { background: #78350f; color: #fef3c7; border: 1px solid #d97706; }
+  .btn-missed  { background: #7f1d1d; color: #fecaca; border: 1px solid #dc2626; }
+
+  .btn-know:not(:disabled):hover    { background: #15803d; }
+  .btn-partial:not(:disabled):hover { background: #92400e; }
+  .btn-missed:not(:disabled):hover  { background: #991b1b; }
+
+  /* Nav row */
+  .nav-row {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+    max-width: 580px;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+
+  .nav-btn {
+    background: #1a1d27;
+    border: 1px solid #2d3244;
+    color: #cbd5e1;
+    padding: 8px 18px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .nav-btn:hover { background: #22263a; }
+
+  .shuffle-btn {
+    background: #1a1d27;
+    border: 1px solid #3b4269;
+    color: #818cf8;
+    padding: 8px 18px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.15s;
+  }
+  .shuffle-btn:hover { background: #1e2240; }
+
+  /* Keyboard shortcuts */
+  .shortcuts {
+    font-size: 0.72rem;
+    color: #4b5563;
+    text-align: center;
+    line-height: 1.8;
+  }
+  .shortcuts kbd {
+    display: inline-block;
+    background: #1a1d27;
+    border: 1px solid #374151;
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-family: monospace;
+    font-size: 0.7rem;
+    color: #9ca3af;
+  }
+
+  /* Completion screen */
+  .completion {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 580px;
+    background: #1a1d27;
+    border: 1px solid #2d3244;
+    border-radius: 18px;
+    padding: 36px 28px;
+    text-align: center;
+    gap: 16px;
+  }
+  .completion h2 { font-size: 1.4rem; font-weight: 700; color: #f1f5f9; }
+  .completion p { color: #8b95a5; font-size: 0.9rem; line-height: 1.6; }
+  .completion .big-scores {
+    display: flex;
+    gap: 24px;
+    justify-content: center;
+  }
+  .completion .big-scores .bs {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .completion .big-scores .bs span:first-child {
+    font-size: 2.4rem;
+    font-weight: 800;
+  }
+  .completion .big-scores .bs span:last-child {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #8b95a5;
+  }
+  .restart-btn {
+    background: #3b4fbd;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 12px 32px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+    margin-top: 8px;
+  }
+  .restart-btn:hover { background: #4f63d2; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>IBM Z Hardware Flashcards</h1>
+  <p>Subject Matter Expert Study Deck — 25 Cards</p>
+</header>
+
+<div class="scorebar">
+  <div class="score-item know">
+    <div class="val" id="s-know">0</div>
+    <div class="lbl">Know</div>
+  </div>
+  <div class="score-item partial">
+    <div class="val" id="s-partial">0</div>
+    <div class="lbl">Partial</div>
+  </div>
+  <div class="score-item missed">
+    <div class="val" id="s-missed">0</div>
+    <div class="lbl">Missed</div>
+  </div>
+  <div class="score-item remain">
+    <div class="val" id="s-remain">25</div>
+    <div class="lbl">Remaining</div>
+  </div>
+</div>
+
+<div class="progress-wrap">
+  <div class="progress-meta">
+    <span id="prog-label">Card 1 of 25</span>
+    <span id="prog-pct">0%</span>
+  </div>
+  <div class="progress-track">
+    <div class="progress-fill" id="prog-fill" style="width:0%"></div>
+  </div>
+</div>
+
+<!-- Card -->
+<div class="scene" id="scene">
+  <div class="card" id="card">
+    <div class="face front">
+      <span class="category" id="f-cat"></span>
+      <span class="card-num" id="f-num"></span>
+      <h2 id="f-q"></h2>
+      <span class="hint">Click or press Space to flip</span>
+    </div>
+    <div class="face back">
+      <span class="category" id="b-cat"></span>
+      <span class="card-num" id="b-num"></span>
+      <span class="answer-label">Answer</span>
+      <h2 id="b-a"></h2>
+      <span class="hint">Rate yourself below</span>
+    </div>
+  </div>
+</div>
+
+<!-- Rating buttons (shown only after flip) -->
+<div class="actions" id="actions">
+  <button class="btn btn-know"    id="btn-know"    disabled>✓ Know  <small style="opacity:.6;font-weight:400">[1]</small></button>
+  <button class="btn btn-partial" id="btn-partial" disabled>~ Partial <small style="opacity:.6;font-weight:400">[2]</small></button>
+  <button class="btn btn-missed"  id="btn-missed"  disabled>✗ Missed <small style="opacity:.6;font-weight:400">[3]</small></button>
+</div>
+
+<!-- Nav row -->
+<div class="nav-row">
+  <button class="nav-btn" id="btn-prev">← Prev</button>
+  <button class="shuffle-btn" id="btn-shuffle">⇄ Shuffle</button>
+  <button class="nav-btn" id="btn-next">Next →</button>
+</div>
+
+<div class="shortcuts">
+  <kbd>Space</kbd> flip &nbsp;·&nbsp; <kbd>1</kbd> Know &nbsp;·&nbsp; <kbd>2</kbd> Partial &nbsp;·&nbsp; <kbd>3</kbd> Missed &nbsp;·&nbsp; <kbd>←</kbd><kbd>→</kbd> navigate
+</div>
+
+<!-- Completion -->
+<div class="completion" id="completion">
+  <h2>🎉 Deck Complete!</h2>
+  <p>Here's how you scored on this pass through the IBM Z Hardware deck:</p>
+  <div class="big-scores">
+    <div class="bs"><span id="c-know" style="color:#22c55e">0</span><span>Know</span></div>
+    <div class="bs"><span id="c-partial" style="color:#f59e0b">0</span><span>Partial</span></div>
+    <div class="bs"><span id="c-missed" style="color:#ef4444">0</span><span>Missed</span></div>
+  </div>
+  <p id="c-msg"></p>
+  <button class="restart-btn" id="btn-restart">Restart Deck</button>
+</div>
+
+<script>
+const CARDS = [
+  { cat: "System Overview", q: "What is the IBM z16?", a: "IBM's latest generation mainframe (2022), featuring an on-chip AI accelerator (Telum), PCIe Gen 5, and support for 40 TB of memory — designed for real-time AI inference at scale." },
+  { cat: "Processor", q: "What is the IBM Telum chip?", a: "A 7nm processor introduced in z16 with 8 cores per chip, 32 MB per-core L2 cache, and a dedicated on-chip AI inference accelerator delivering 6 TOPS per chip — the first mainframe CPU with integrated deep-learning inference." },
+  { cat: "Processor", q: "What is a Processor Unit (PU) and its types on IBM Z?", a: "A PU is a physical processor core that can be configured as: CP (general purpose), IFL (Linux/zVM), ICF (coupling), zIIP (specialty for eligible workloads), SAP (system assist), or spares — enabling workload-optimized licensing." },
+  { cat: "Processor", q: "What is a zIIP processor?", a: "IBM Z Integrated Information Processor — a specialty engine that offloads eligible workloads (Java, XML, DB2 utilities, z/OS Connect, encryption) from CPs, reducing software licensing costs." },
+  { cat: "Processor", q: "What is an IFL (Integrated Facility for Linux)?", a: "A dedicated processor for running Linux (natively or under z/VM) on IBM Z. IFLs are priced differently from general-purpose CPs and do not consume MSUs for z/OS software licensing." },
+  { cat: "Memory", q: "What memory architecture does IBM z16 use?", a: "z16 supports up to 40 TB of RAIM (Redundant Array of Independent Memory) — DRAM organized to detect and correct multi-bit errors, providing RAS (Reliability, Availability, Serviceability) at the memory level." },
+  { cat: "Memory", q: "What is RAIM on IBM Z?", a: "Redundant Array of Independent Memory — similar to RAID for disks, RAIM stripes data across memory DIMMs with parity so that a full DIMM failure can be recovered without data loss or system outage." },
+  { cat: "I/O", q: "What is FICON and why does IBM Z use it?", a: "Fibre Connection — IBM Z's primary storage I/O protocol built on Fibre Channel, providing deterministic, low-latency, high-bandwidth connectivity to enterprise disk (DS8000). Supports distances up to 100 km with FICON Extended Distance." },
+  { cat: "I/O", q: "What is a CHPID on IBM Z?", a: "Channel Path Identifier — a logical identifier (00–FF hex) assigned to a physical I/O channel path. Each CHPID has a type (FICON, OSA, HiperSockets, etc.) and is defined in the IOCDS via the HCD tool." },
+  { cat: "I/O", q: "What is OSA-Express on IBM Z?", a: "Open Systems Adapter-Express — the mainframe's native Ethernet adapter, supporting 10/25/100 GbE. Provides direct TCP/IP connectivity and supports QDIO (Queued Direct I/O) for high-throughput network traffic." },
+  { cat: "Virtualization", q: "What is PR/SM on IBM Z?", a: "Processor Resource/Systems Manager — IBM Z's built-in Type-1 hypervisor (firmware-level). It partitions the physical machine into LPARs (Logical Partitions), each with dedicated or shared CPU, memory, and I/O resources." },
+  { cat: "Virtualization", q: "What is an LPAR (Logical Partition)?", a: "A hardware-level virtual machine created by PR/SM. Each LPAR can run a different OS (z/OS, Linux, z/VM, z/VSE). LPARs are defined in the HMC and isolated at the microcode level for security and fault tolerance." },
+  { cat: "Virtualization", q: "What is z/VM and how does it differ from PR/SM?", a: "z/VM is IBM's Type-2 hypervisor running inside an LPAR. It can host thousands of Linux virtual machines (guests). PR/SM partitions the hardware; z/VM provides software-level virtualization within one of those partitions." },
+  { cat: "RAS", q: "What does RAS stand for and why is it central to IBM Z?", a: "Reliability, Availability, Serviceability. IBM Z targets 99.99999% availability (7 nines). RAS features include RAIM, redundant power/cooling, concurrent hardware maintenance, predictive failure analysis, and first-failure data capture (FFDC)." },
+  { cat: "RAS", q: "What is Concurrent Maintenance on IBM Z?", a: "The ability to replace failing hardware components (memory books, PCIe adapters, power supplies, cooling) while the system remains running, without scheduling downtime — a key contributor to IBM Z's 7-nines availability." },
+  { cat: "Security", q: "What is the IBM Z Pervasive Encryption capability?", a: "A hardware-accelerated feature using CPACF (CP Assist for Cryptographic Functions) to transparently encrypt data at rest (full-volume DASD, tape) and in flight (TLS) with near-zero CPU overhead — often 1–5% impact." },
+  { cat: "Security", q: "What is a Crypto Express adapter on IBM Z?", a: "A PCIe-attached FIPS 140-2 Level 4 Hardware Security Module (HSM) for IBM Z. Used for secure key generation, storage (CCA or EP11 mode), and cryptographic offload. z16 supports Crypto Express 8S." },
+  { cat: "Security", q: "What is Secure Execution on IBM Z (z15/z16)?", a: "A hardware feature that creates encrypted, isolated execution environments for Linux workloads. Protects workload memory from the hypervisor and system admins — enabling confidential computing in shared or cloud environments." },
+  { cat: "Coupling", q: "What is the IBM Z Coupling Facility (CF)?", a: "A specialized LPAR (or separate CPC) that provides shared memory structures (caches, lists, locks) for Parallel Sysplex. CF allows multiple z/OS images to share data and coordinate work as a single logical system." },
+  { cat: "Coupling", q: "What is Parallel Sysplex?", a: "IBM's clustering technology for z/OS — up to 32 z/OS images connected via Coupling Facility links (ICB or InfiniBand) to share workloads, data, and provide continuous availability. Enables scale-out without application changes." },
+  { cat: "System Hardware", q: "What is the HMC (Hardware Management Console)?", a: "A dedicated workstation used to configure, monitor, and manage IBM Z systems. It provides a GUI and API (REST) interface to define LPARs, monitor hardware, apply firmware updates, and manage the entire CPC lifecycle." },
+  { cat: "System Hardware", q: "What is the CPC (Central Processor Complex)?", a: "The physical IBM Z server unit — includes all processor books, memory, I/O cages, and power infrastructure housed in a single frame. A CPC can be divided into LPARs by PR/SM." },
+  { cat: "Networking", q: "What is HiperSockets on IBM Z?", a: "An internal high-speed network facility that allows LPARs and z/VM guests on the same CPC to communicate at near-memory speeds without leaving the machine — eliminating external switch hops for intra-system traffic." },
+  { cat: "Storage", q: "What is the IBM DS8000 and its relationship to IBM Z?", a: "IBM's flagship enterprise storage system, purpose-built for IBM Z. Connected via FICON, it supports z/OS Global Mirror (remote replication), Easy Tier (automated flash tiering), and DSCLI management. Designed for 99.99999% availability." },
+  { cat: "LinuxONE", q: "What is IBM LinuxONE and how does it differ from IBM Z?", a: "LinuxONE is the Linux-only brand of IBM Z hardware (e.g., LinuxONE Emperor 4). It uses the same underlying hardware (z16 architecture, Telum chip) but is packaged and licensed exclusively for Linux and open-source workloads, without z/OS capabilities." }
+];
+
+let deck = [], idx = 0, flipped = false;
+let scores = { know: 0, partial: 0, missed: 0 };
+let rated = []; // per-card rating
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function initDeck() {
+  deck = shuffle([...CARDS]);
+  idx = 0; flipped = false;
+  scores = { know: 0, partial: 0, missed: 0 };
+  rated = new Array(deck.length).fill(null);
+  document.getElementById('completion').style.display = 'none';
+  document.getElementById('scene').style.display = 'block';
+  document.getElementById('actions').style.display = 'flex';
+  document.querySelector('.nav-row').style.display = 'flex';
+  document.querySelector('.shortcuts').style.display = 'block';
+  renderCard();
+  updateScore();
+}
+
+function renderCard() {
+  const c = deck[idx];
+  document.getElementById('f-cat').textContent = c.cat;
+  document.getElementById('b-cat').textContent = c.cat;
+  document.getElementById('f-num').textContent = (idx + 1) + ' / ' + deck.length;
+  document.getElementById('b-num').textContent = (idx + 1) + ' / ' + deck.length;
+  document.getElementById('f-q').textContent = c.q;
+  document.getElementById('b-a').textContent = c.a;
+
+  const cardEl = document.getElementById('card');
+  cardEl.classList.remove('flipped');
+  flipped = false;
+  setRateButtons(false);
+
+  // Highlight if already rated
+  const r = rated[idx];
+  const bk = document.getElementById('btn-know');
+  const bp = document.getElementById('btn-partial');
+  const bm = document.getElementById('btn-missed');
+  bk.style.outline = bp.style.outline = bm.style.outline = '';
+  if (r === 'know') bk.style.outline = '2px solid #22c55e';
+  if (r === 'partial') bp.style.outline = '2px solid #f59e0b';
+  if (r === 'missed') bm.style.outline = '2px solid #ef4444';
+
+  // progress
+  const done = rated.filter(x => x !== null).length;
+  const pct = Math.round((done / deck.length) * 100);
+  document.getElementById('prog-label').textContent = 'Card ' + (idx + 1) + ' of ' + deck.length;
+  document.getElementById('prog-pct').textContent = pct + '%';
+  document.getElementById('prog-fill').style.width = pct + '%';
+}
+
+function setRateButtons(enabled) {
+  ['btn-know','btn-partial','btn-missed'].forEach(id => {
+    document.getElementById(id).disabled = !enabled;
+  });
+}
+
+function flipCard() {
+  const cardEl = document.getElementById('card');
+  if (!flipped) {
+    cardEl.classList.add('flipped');
+    flipped = true;
+    setRateButtons(true);
+  } else {
+    cardEl.classList.remove('flipped');
+    flipped = false;
+    setRateButtons(false);
+  }
+}
+
+function rate(type) {
+  const prev = rated[idx];
+  if (prev) scores[prev]--;
+  rated[idx] = type;
+  scores[type]++;
+  updateScore();
+  renderCard();
+
+  // Check if all rated
+  if (rated.every(x => x !== null)) {
+    setTimeout(showCompletion, 400);
+  } else {
+    // Auto-advance
+    if (idx < deck.length - 1) {
+      setTimeout(() => { idx++; renderCard(); }, 300);
+    }
+  }
+}
+
+function updateScore() {
+  document.getElementById('s-know').textContent = scores.know;
+  document.getElementById('s-partial').textContent = scores.partial;
+  document.getElementById('s-missed').textContent = scores.missed;
+  document.getElementById('s-remain').textContent = rated.filter(x => x === null).length;
+}
+
+function showCompletion() {
+  document.getElementById('scene').style.display = 'none';
+  document.getElementById('actions').style.display = 'none';
+  document.querySelector('.nav-row').style.display = 'none';
+  document.querySelector('.shortcuts').style.display = 'none';
+
+  document.getElementById('c-know').textContent = scores.know;
+  document.getElementById('c-partial').textContent = scores.partial;
+  document.getElementById('c-missed').textContent = scores.missed;
+
+  const pct = Math.round((scores.know / deck.length) * 100);
+  let msg = '';
+  if (pct >= 90) msg = 'Outstanding! You\'re well on your way to IBM Z SME status. 🏆';
+  else if (pct >= 70) msg = 'Solid pass! Review the missed cards and run again.';
+  else if (pct >= 50) msg = 'Good start — keep drilling the hardware fundamentals.';
+  else msg = 'Keep studying — shuffle and repeat until you hit 90%+ Know.';
+  document.getElementById('c-msg').textContent = msg;
+
+  const comp = document.getElementById('completion');
+  comp.style.display = 'flex';
+}
+
+// Event listeners
+document.getElementById('scene').addEventListener('click', flipCard);
+document.getElementById('btn-know').addEventListener('click', (e) => { e.stopPropagation(); rate('know'); });
+document.getElementById('btn-partial').addEventListener('click', (e) => { e.stopPropagation(); rate('partial'); });
+document.getElementById('btn-missed').addEventListener('click', (e) => { e.stopPropagation(); rate('missed'); });
+
+document.getElementById('btn-prev').addEventListener('click', () => {
+  if (idx > 0) { idx--; renderCard(); }
+});
+document.getElementById('btn-next').addEventListener('click', () => {
+  if (idx < deck.length - 1) { idx++; renderCard(); }
+});
+document.getElementById('btn-shuffle').addEventListener('click', initDeck);
+document.getElementById('btn-restart').addEventListener('click', initDeck);
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === ' ' || e.code === 'Space') { e.preventDefault(); flipCard(); }
+  if (e.key === 'ArrowRight') { if (idx < deck.length - 1) { idx++; renderCard(); } }
+  if (e.key === 'ArrowLeft')  { if (idx > 0) { idx--; renderCard(); } }
+  if (e.key === '1' && flipped) rate('know');
+  if (e.key === '2' && flipped) rate('partial');
+  if (e.key === '3' && flipped) rate('missed');
+});
+
+// Init
+initDeck();
+</script>
+</body>
+</html>
